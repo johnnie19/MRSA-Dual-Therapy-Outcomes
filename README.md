@@ -72,21 +72,30 @@ However, the study limitations include:
 
 ```
 .
-├── README.md
-├── mrsa_bacteria_project.Rmd                  # Complete R Markdown analysis file
-├── mrsa_cleaned.csv         # Cleaned dataset (not included in repo)
-├── mrsa_project.pdf         # Generated report
-└── figures/                 # Output visualizations
-    ├── mortality_bar.png
-    ├── mortality_scatter.png
-    ├── readmission_bar.png
-    ├── readmission_scatter.png
-    ├── recurrence_bar.png
-    ├── recurrence_scatter.png
-    ├── adverse_effects_bar.png
-    ├── adverse_effects_scatter.png
-    ├── composite_failure_bar.png
-    └── composite_failure_scatter.png
+├── README.md                            # Project overview
+├── notebook/
+│   └── mrsa_bacteria_project.Rmd        # R Markdown analysis
+│
+├── data/
+│   └── mrsa_cleaned.csv                 # Cleaned dataset (excluded from repo if too large)
+│
+├── report/
+│   └── mrsa_project.pdf                 # Final rendered report
+│
+├── figures/                             # All output plots
+│   ├── mortality_bar.png
+│   ├── mortality_scatter.png
+│   ├── readmission_bar.png
+│   ├── readmission_scatter.png
+│   ├── recurrence_bar.png
+│   ├── recurrence_scatter.png
+│   ├── adverse_effects_bar.png
+│   ├── adverse_effects_scatter.png
+│   ├── composite_failure_bar.png
+│   └── composite_failure_scatter.png
+│
+└── .gitignore                           # To ignore large files or system files
+
 ```
 
 ## Requirements
@@ -114,12 +123,8 @@ install.packages(c("tidyverse", "ggplot2", "knitr", "rmarkdown"))
 
 4. Run the analysis:
 ```r
-rmarkdown::render("josh.Rmd")
+rmarkdown::render("mrsa_bacteria_project.Rmd")
 ```
-
-## Data Privacy
-
-The dataset is not included in this repository to protect patient privacy. Researchers with access to the data can run the analysis using their own copy of the dataset.
 
 ## Citation
 
