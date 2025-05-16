@@ -1,0 +1,140 @@
+---
+title: "MRSA project"
+author: "John and Yiran"
+date: "`r format(Sys.Date(), '%B %e, %Y')`"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(ggmosaic)
+# mrsa <- read.delim("mrsa.csv", na.strings = "999")
+# mrsa$exclusion_criteria_yesno <- NULL
+# mrsa$inclusionexclusion_criteria_complete <- NULL
+# write.table(mrsa, "mrsa_cleaned.csv", quote = FALSE, sep = "\t", row.names = FALSE)
+mrsa <- read.delim("mrsa_cleaned.csv")
+mrsa$therapy_morethan_10 <- ifelse(mrsa$dual_therapy_duration > 10, 1, 0)
+```
+
+## Relationship between patient mortality and dual therapy duration
+
+First, we group the patients based on if the dual therapy duration is more than 10. The mortality in the two groups is shown below. The p-value of the Fisher's exact test for the difference in mortality is 0.6776, not significant. The odds ratio shown is between the event of patient death and a dual therapy of more than 10 days.
+
+```{r}
+mrsa |> mutate(patient_death = ifelse(patient_death == 1, TRUE, FALSE), therapy_morethan_10 = ifelse(therapy_morethan_10 == 1, TRUE, FALSE)) |> select(patient_death, therapy_morethan_10) |> table() |> fisher.test()
+mrsa |>
+  mutate(dual_therapy_duration = ifelse(therapy_morethan_10 == 1, "more than 10", "less or equal to 10"),
+         patient_death = ifelse(patient_death == 1, "yes", "no") |> as.factor() |> fct_rev()) |>
+  ggplot() +
+  geom_mosaic(aes(x = product(dual_therapy_duration), fill = patient_death))
+```
+
+If we skip grouping and directly test if the mortality is related to the dual therapy duration. The relationship is shown as the graph below (with some jittering). Logistic regression shows the p-value to be 0.2735, not significant. Removing the three apparent outliers can only brings it down to 0.208.
+
+```{r}
+set.seed(1)
+mrsa |> mutate(patient_death = ifelse(patient_death == 1, "yes", "no") |> as.factor() |> fct_rev()) |>
+  ggplot() +
+  geom_jitter(aes(x = dual_therapy_duration, y = patient_death), width = .3, height = 0, alpha = .3)
+```
+
+## Relationship between patient readmission and dual therapy duration
+
+The same thing above is conducted for patient readmission. The p-value for Fisher's exact test is 1, for logistic regression is 0.4532, again both not significant.
+
+```{r}
+mrsa |> mutate(patient_readmission = ifelse(patient_readmission == 1, TRUE, FALSE), therapy_morethan_10 = ifelse(therapy_morethan_10 == 1, TRUE, FALSE)) |> select(patient_readmission, therapy_morethan_10) |> table() |> fisher.test()
+mrsa |>
+  mutate(dual_therapy_duration = ifelse(therapy_morethan_10 == 1, "more than 10", "less or equal to 10"),
+         patient_readmission = ifelse(patient_readmission == 1, "yes", "no") |> as.factor() |> fct_rev()) |>
+  ggplot() +
+  geom_mosaic(aes(x = product(dual_therapy_duration), fill = patient_readmission))
+```
+
+```{r}
+# glm(I(patient_readmission - 1) ~ dual_therapy_duration, data = mrsa, family = "binomial") |> summary()
+# table(mrsa[, c("patient_readmission", "therapy_morethan_10")]) |> fisher.test()
+```
+
+```{r}
+mrsa |> mutate(patient_readmission = ifelse(patient_readmission == 1, "yes", "no") |> as.factor() |> fct_rev()) |>
+  ggplot() +
+  geom_jitter(aes(x = dual_therapy_duration, y = patient_readmission), width = .3, height = 0, alpha = .3)
+```
+
+## Relationship between patient recurrence and dual therapy duration
+
+Since there is only one case of recurrence, we are unable to conduct statistical analysis.
+
+```{r}
+mrsa |>
+  mutate(dual_therapy_duration = ifelse(therapy_morethan_10 == 1, "more than 10", "less or equal to 10"),
+         patient_recurrence = ifelse(patient_recurrence == 1, "yes", "no") |> as.factor() |> fct_rev()) |>
+  ggplot() +
+  geom_mosaic(aes(x = product(dual_therapy_duration), fill = patient_recurrence))
+```
+
+```{r}
+mrsa |> mutate(patient_recurrence = ifelse(patient_recurrence == 1, "yes", "no") |> as.factor() |> fct_rev()) |>
+  ggplot() +
+  geom_jitter(aes(x = dual_therapy_duration, y = patient_recurrence), width = .3, height = 0, alpha = .3)
+```
+
+
+
+```{r}
+# ICU stay during admission and demographics between groups
+```
+
+## Relationship between adverse outcomes and dual therapy duration
+
+It is clear from the graphs that there is no evidence that longer dual therapy duration leads to increased adverse outcomes, but this does not prove that the opposite (that longer dual therapy duration does not lead to increased adverse outcomes) is true, especially since our sample size is small.
+
+```{r}
+mrsa |> mutate(adverse_effect = ifelse(adverse_effect == 1, TRUE, FALSE), therapy_morethan_10 = ifelse(therapy_morethan_10 == 1, TRUE, FALSE)) |> select(adverse_effect, therapy_morethan_10) |> table()
+mrsa |>
+  mutate(dual_therapy_duration = ifelse(therapy_morethan_10 == 1, "more than 10", "less or equal to 10"),
+         adverse_effect_type = ifelse(is.na(adverse_effect_type), "", as.character(adverse_effect_type)) |> sapply(function(x) switch(x, "2" = "CK Elevation", "5" = "Rash", "No Adverse Effect")) |> as.factor() |> {function(x) {factor(x, levels = levels(x)[c(3, 1, 2)])}}()) |>
+  ggplot() +
+  geom_mosaic(aes(x = product(dual_therapy_duration), fill = adverse_effect_type))
+```
+
+```{r}
+mrsa |>
+  mutate(adverse_effect_type = ifelse(is.na(adverse_effect_type), "", as.character(adverse_effect_type)) |> sapply(function(x) switch(x, "2" = "CK Elevation", "5" = "Rash", "No Adverse Effect")) |> as.factor() |> {function(x) {factor(x, levels = levels(x)[c(3, 1, 2)])}}(),
+         adverse_effect = ifelse(adverse_effect == 1, "yes", "no") |> fct_rev()) |>
+  ggplot() +
+  geom_jitter(aes(x = dual_therapy_duration, y = adverse_effect, color = adverse_effect_type), width = .3, height = 0, alpha = .5)
+```
+
+If it is of interest to test if longer dual therapy duration leads to differences (not specified to be higher or lower) adverse outcomes, then the Fisher exact test result is shown below. A p-value of 0.09778 indicates weak evidence for decrease in adverse outcomes, however, this should be taken with a grain of salt, since the cut off point in our grouping is 10 and patients experiencing adverse outcomes all have exactly or just below 10 days of dual therapy. It is better to look at the result of logistic regression, which treats dual therapy length as a continuous variable. And the p-value for that is 0.168
+
+```{r}
+mrsa |> mutate(adverse_effect = ifelse(adverse_effect == 1, TRUE, FALSE), therapy_morethan_10 = ifelse(therapy_morethan_10 == 1, TRUE, FALSE)) |> select(adverse_effect, therapy_morethan_10) |> table() |> fisher.test()
+```
+
+## Relationship between composite clinical failure and dual therapy duration
+
+The p-value of the Fisher's exact test for the difference in composite clinical failure is 0.7036, of the logistic regression for composite clinical failure against duration is 0.292.
+
+```{r}
+mrsa |> mutate(composite_failure = ifelse(patient_death == 1 | patient_readmission == 1 | patient_recurrence == 1, TRUE, FALSE), therapy_morethan_10 = ifelse(therapy_morethan_10 == 1, TRUE, FALSE)) |> select(composite_failure, therapy_morethan_10) |> table() |> fisher.test()
+mrsa |>
+  mutate(dual_therapy_duration = ifelse(therapy_morethan_10 == 1, "more than 10", "less or equal to 10"),
+         composite_failure = ifelse(patient_death == 1 | patient_readmission == 1 | patient_recurrence == 1, "yes", "no") |> as.factor() |> fct_rev()) |>
+  ggplot() +
+  geom_mosaic(aes(x = product(dual_therapy_duration), fill = composite_failure))
+```
+
+```{r}
+set.seed(1)
+mrsa |> mutate(composite_failure = ifelse(patient_death == 1 | patient_readmission == 1 | patient_recurrence == 1, "yes", "no") |> as.factor() |> fct_rev()) |>
+  ggplot() +
+  geom_jitter(aes(x = dual_therapy_duration, y = composite_failure), width = .3, height = 0, alpha = .3)
+# glm(I(ifelse(patient_death == 1 | patient_readmission == 1 | patient_recurrence == 1, 1, 0)) ~ dual_therapy_duration, data = mrsa, family = "binomial") |> summary()
+```
+
